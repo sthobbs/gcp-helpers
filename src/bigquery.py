@@ -6,6 +6,7 @@ from google.api_core.exceptions import BadRequest, NotFound
 from google.cloud import bigquery
 from collections import OrderedDict
 from google.oauth2 import service_account
+from src.logger import Logger
 
 
 class BigQuery():
@@ -47,6 +48,9 @@ class BigQuery():
         )
         self.client = bigquery.Client(credentials=credentials, project=self.project_id)
 
+        # set up logger
+        self.logger = Logger(self.project_id).logger
+
     def get_table_schema(self):
         """Get table schema from json file."""
 
@@ -57,7 +61,7 @@ class BigQuery():
                 with open(self.schema_json_path, 'r') as f:
                     schema = json.load(f, object_pairs_hook=OrderedDict)
             except Exception as e:
-                print(f"error opening or parsing schema: {e}")
+                self.logger.error(f"error opening or parsing schema: {e}")
                 raise
 
             # convert to bigquery schema
@@ -72,10 +76,10 @@ class BigQuery():
         dataset_id = self.full_dataset_id
         try:
             self.client.get_dataset(dataset_id)
-            print(f"Dataset {dataset_id} already exists")
+            self.logger.info(f"Dataset {dataset_id} exists")
             return True
         except NotFound:
-            print(f"Dataset {dataset_id} is not found")
+            self.logger.info(f"Dataset {dataset_id} is not found")
             return False
 
     def table_exists(self):
@@ -84,10 +88,10 @@ class BigQuery():
         table_id = self.full_table_id
         try:
             self.client.get_table(table_id)
-            print(f"Table {table_id} already exists")
+            self.logger.info(f"Table {table_id} exists")
             return True
         except NotFound:
-            print(f"Table {table_id} is not found")
+            self.logger.info(f"Table {table_id} is not found")
             return False
 
     def create_dataset(self, exists_ok=False):
@@ -104,7 +108,7 @@ class BigQuery():
         dataset = bigquery.Dataset(dataset_id)
         dataset.location = self.location
         dataset = self.client.create_dataset(dataset, exists_ok=exists_ok, timeout=30)
-        print(f"Created dataset {dataset_id}")
+        self.logger.info(f"Created dataset {dataset_id}")
 
     def delete_dataset(self):
         """Delete a dataset."""
@@ -112,7 +116,7 @@ class BigQuery():
         self.client.delete_dataset(
             self.full_dataset_id, delete_contents=True, not_found_ok=True
         )
-        print(f"Deleted dataset '{self.dataset_id}'.")
+        self.logger.info(f"Deleted dataset '{self.dataset_id}'.")
 
     def create_table(self, partition_field=None, clustering_fields=None):
         """
@@ -132,7 +136,7 @@ class BigQuery():
 
         # confirm schema exists
         if not getattr(self, 'table_schema', None):
-            print("No table_schema provided")
+            self.logger.error("No table_schema provided")
             raise ValueError("No table_schema provided")
 
         # create table representation
@@ -150,14 +154,14 @@ class BigQuery():
 
         # create tabe
         table = self.client.create_table(table, timeout=30)
-        print(f"Created table {self.full_table_id}")
+        self.logger.info(f"Created table {self.full_table_id}")
 
     def delete_table(self):
         """Delete a table."""
 
         table_id = self.full_table_id
         self.client.delete_table(table_id, not_found_ok=True)
-        print(f"Deleted table '{table_id}'.")
+        self.logger.info(f"Deleted table '{table_id}'.")
 
     def copy_table(self, dest_table, dest_dataset=None):
         """
@@ -174,14 +178,16 @@ class BigQuery():
         if dest_dataset is None:
             dest_dataset = self.dataset_id
         dest_table_id = f"{self.project_id}.{dest_dataset}.{dest_table}"
+        self.logger.info(f"copying table {self.full_table_id} into {dest_table_id}.")
         job = self.client.copy_table(self.full_table_id, dest_table_id)
         job.result()  # Wait for the job to complete.
-        print(f"{self.full_table_id} was copied into {dest_table_id}.")
+        self.logger.info(f"{self.full_table_id} was copied into {dest_table_id}.")
 
     def close(self):
         """Close the client connection."""
 
         self.client.close()
+        self.logger.info("Client connection closed")
         return True
 
     def load_from_gcs(self,
@@ -272,7 +278,7 @@ class BigQuery():
             ]
 
         # load data from gcs
-        print(f"Loading data from {gcs_uri} into {self.full_table_id}")
+        self.logger.info(f"Loading data from {gcs_uri} into {self.full_table_id}")
         load_job = self.client.load_table_from_uri(
             gcs_uri, self.full_table_id, job_config=job_config)
 
@@ -281,10 +287,10 @@ class BigQuery():
             load_job.result()
         except BadRequest as e:
             for error in e.errors:
-                print(error)
+                self.logger.error(error)
             raise
         destination_table = self.client.get_table(self.full_table_id)
-        print(f"{destination_table.num_rows} rows in {self.full_table_id}.")
+        self.logger.info(f"{destination_table.num_rows} rows in {self.full_table_id}.")
 
     def extract_to_gcs(self, gcs_uri, dest_format=None):
         """
@@ -325,13 +331,13 @@ class BigQuery():
                 job_config.destination_format = bigquery.DestinationFormat.CSV
 
         # extract data to gcs
-        print(f"Extracting data from {self.full_table_id} into {gcs_uri}")
+        self.logger.info(f"Extracting data from {self.full_table_id} into {gcs_uri}.")
         extract_job = self.client.extract_table(
             self.full_table_id, gcs_uri, location=self.location, job_config=job_config)
 
         # wait for job to complete
         extract_job.result()
-        print(f"Data extracted from {self.full_table_id} into {gcs_uri}.")
+        self.logger.info(f"Data extracted from {self.full_table_id} into {gcs_uri}.")
 
     def load_from_dataframe(self, df):
         """
@@ -351,8 +357,10 @@ class BigQuery():
         this can be changed.
         """
 
+        self.logger.info(f"Extracting data from dataframe into {self.full_table_id}...")
         table_id = f"{self.dataset_id}.{self.table_id}"
         pandas_gbq.to_gbq(df, table_id, project_id=self.project_id)
+        self.logger.info(f"Extracted data from dataframe into {self.full_table_id}")
 
     def query(self, query, dest_table_id=None, write_disposition='WRITE_TRUNCATE',
               relaxed_schema=False, partition_field=None, clustering_fields=None):
@@ -423,11 +431,11 @@ class BigQuery():
             table_id = "pandas DataFrame"
 
         # run query
-        print(f"Running query to destination: {table_id}")
+        self.logger.info(f"Running query to destination: {table_id}")
         if dest_table_id is not None:
             query_job = self.client.query(
                 query, location=self.location, job_config=job_config)
             query_job.result()
         else:
             return query_job.to_dataframe()
-        print(f"Completed query to destination: {table_id}")
+        self.logger.info(f"Completed query to destination: {table_id}")

@@ -5,6 +5,7 @@ from google.oauth2 import service_account
 from glob import glob
 import os
 from pathlib import Path
+from src.logger import Logger
 
 
 class Storage():
@@ -42,7 +43,7 @@ class Storage():
 
         blob = self.bucket.blob(gcs_src_path)
         blob.download_to_filename(local_dest_path)
-        print(f"Blob {gcs_src_path} downloaded to {local_dest_path}.")
+        self.logger.info(f"Blob {gcs_src_path} downloaded to {local_dest_path}.")
 
     def upload_file(self, local_src_path, gcs_dest_path):
         """
@@ -58,7 +59,7 @@ class Storage():
         """
 
         blob = self.bucket.blob(gcs_dest_path)
-        print(f"Uploading {local_src_path} to {gcs_dest_path}...")
+        self.logger.info(f"Uploading {local_src_path} to {gcs_dest_path}...")
         blob.upload_from_filename(local_src_path)
 
     def upload_dir_recursive(self, local_src_dir, gcs_dest_dir):
@@ -113,5 +114,6 @@ class Storage():
             :attr:`Blob.prefixes`. Duplicate prefixes are omitted.
         """
 
+        self.logger.info(f"Getting list of blobs with prefix {prefix}")
         blobs = self.bucket.list_blobs(prefix=prefix, delimiter=delimiter)
         return [b.name for b in blobs]
