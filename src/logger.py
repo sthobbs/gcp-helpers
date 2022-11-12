@@ -16,21 +16,17 @@ class Logger():
         self.client = google.cloud.logging.Client(credentials=credentials,
                                                   project=project_id)
 
-        # set up stackdriver logging
-        self.client.setup_logging()
         self.logger = logging.getLogger('cloudLogger')
         self.logger.setLevel(logging.INFO)
 
         # add handlers to logger
         if not self.logger.handlers:
 
+            # set up stackdriver logging
+            self.client.setup_logging()
+
             # set up formatter
             formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-            # set up cloud logging handler
-            handler = CloudLoggingHandler(self.client)
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
 
             # set up console logging handler
             handler = logging.StreamHandler()

@@ -1,5 +1,6 @@
 google-cloud==0.34.0
 google-cloud-bigquery==3.3.6
+google-cloud-logging==3.2.5
 google-cloud-pubsub==2.13.10
 google-cloud-storage==2.6.0
 pandas-gbq==0.17.9

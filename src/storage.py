@@ -27,6 +27,9 @@ class Storage():
         self.client = storage.Client(credentials=credentials, project=self.project_id)
         self.bucket = self.client.bucket(self.bucket_name)
 
+        # set up logger
+        self.logger = Logger(self.project_id).logger
+
     def download_blob(self, gcs_src_path, local_dest_path):
         """
         Downloads a blob from the bucket.

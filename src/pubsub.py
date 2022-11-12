@@ -67,6 +67,9 @@ class PubSub():
         self.received_messages = []
         self.encoding = "utf-8"
 
+        # set up logger
+        self.logger = Logger(self.project_id).logger
+
     def create_topic(self):
         """Create a new topic."""
 
