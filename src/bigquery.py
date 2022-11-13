@@ -28,13 +28,17 @@ class BigQuery():
             Path to json file containing table schema (e.g. "./schema.json")
         location : str, optional
             BigQuery dataset location (e.g. "US")
+        logger : Logger, optional
+            Logger object
         """
 
         # set attributes
-        _kws = {'project_id', 'dataset_id', 'table_id', 'schema_json_path', 'location'}
+        _kws = {'project_id', 'dataset_id', 'table_id', 'schema_json_path', 'location', 'logger'}
         self.__dict__.update({k: v for k, v in kwargs.items() if k in _kws})
-        self.full_dataset_id = f"{self.project_id}.{self.dataset_id}"
-        self.full_table_id = f"{self.project_id}.{self.dataset_id}.{self.table_id}"
+        if getattr(self, 'dataset_id', None):
+            self.full_dataset_id = f"{self.project_id}.{self.dataset_id}"
+        if getattr(self, 'table_id', None):
+            self.full_table_id = f"{self.project_id}.{self.dataset_id}.{self.table_id}"
         if getattr(self, 'location', None) is None:
             self.location = 'US'
         if getattr(self, 'schema_json_path', None):
@@ -49,7 +53,8 @@ class BigQuery():
         self.client = bigquery.Client(credentials=credentials, project=self.project_id)
 
         # set up logger
-        self.logger = Logger(self.project_id).logger
+        if getattr(self, 'logger', None):
+            self.logger = Logger(self.project_id).logger
 
     def get_table_schema(self):
         """Get table schema from json file."""

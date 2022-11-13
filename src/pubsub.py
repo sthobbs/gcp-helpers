@@ -10,7 +10,7 @@ from src.logger import Logger
 class PubSub():
     """Google Cloud Pub/Sub API helper class"""
 
-    def __init__(self, project_id, topic_id, subscription_id=None):
+    def __init__(self, project_id, topic_id, subscription_id=None, logger=None):
         """
         Initialize the PubSub class.
 
@@ -20,6 +20,10 @@ class PubSub():
             Google Cloud project ID (e.g. "my-project")
         topic_id : str
             Google Cloud Pub/Sub topic ID (e.g. "my-topic")
+        subscription_id : str
+            Google Cloud Pub/Sub subscription ID (e.g. "my-subscription")
+        logger : gcp_helpers.logger.Logger
+            Logger object
         """
 
         # pass service account key into credentials
@@ -68,7 +72,10 @@ class PubSub():
         self.encoding = "utf-8"
 
         # set up logger
-        self.logger = Logger(self.project_id).logger
+        if getattr(self, 'logger', None):
+            self.logger = Logger(self.project_id).logger
+        else:
+            self.logger = logger
 
     def create_topic(self):
         """Create a new topic."""

@@ -12,10 +12,21 @@ class Storage():
     """Google Cloud Storage API helper class"""
 
     def __init__(self, **kwargs):
-        """Initializes a client for Google Cloud Storage API"""
+        """
+        Initializes a client for Google Cloud Storage API
+        
+        Parameters
+        ----------
+        project_id : str
+            The project ID of the project to which the client will connect.
+        bucket_name : str
+            The name of the bucket to which the client will connect.
+        logger : Logger
+            The logger to use for logging.
+        """
 
         # set attributes
-        _kws = {'project_id', 'bucket_name'}
+        _kws = {'project_id', 'bucket_name', 'logger'}
         self.__dict__.update({k: v for k, v in kwargs.items() if k in _kws})
 
         # pass service account key into credentials
@@ -28,7 +39,8 @@ class Storage():
         self.bucket = self.client.bucket(self.bucket_name)
 
         # set up logger
-        self.logger = Logger(self.project_id).logger
+        if getattr(self, 'logger', None):
+            self.logger = Logger(self.project_id).logger
 
     def download_blob(self, gcs_src_path, local_dest_path):
         """
