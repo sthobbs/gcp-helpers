@@ -259,7 +259,7 @@ class PubSub():
             Message to publish
         """
 
-        def callback(future: pubsub_v1.publisher.futures.Future) -> None:
+        def callback(future: pubsub_v1.publisher.futures.Future = future) -> None:
             """
             Handle the result of the publish request.
 
