@@ -30,6 +30,8 @@ class BigQuery():
             BigQuery dataset location (e.g. "US")
         logger : Logger, optional
             Logger object
+            Passing the logger explicitly prevents duplicate logging if multiple
+            BigQuery objects are instantiated at the same time in parallel.
         """
 
         # set attributes
@@ -53,7 +55,7 @@ class BigQuery():
         self.client = bigquery.Client(credentials=credentials, project=self.project_id)
 
         # set up logger
-        if getattr(self, 'logger', None):
+        if getattr(self, 'logger', None) is None:
             self.logger = Logger(self.project_id).logger
 
     def get_table_schema(self):
@@ -306,7 +308,9 @@ class BigQuery():
         gcs_uri : str
             Google Cloud Storage URI (e.g. gs://my-bucket/files_*.csv)
         dest_format : str, optional (default: None)
-            Destination format (e.g. CSV, NEWLINE_DELIMITED_JSON, AVRO, PARQUET)
+            Destination format (e.g. CSV, NEWLINE_DELIMITED_JSON, AVRO, PARQUET).
+            If not passed, format is inferred from file extension if possible,
+            otherwise CSV is used.
         """
 
         job_config = bigquery.ExtractJobConfig()
@@ -442,5 +446,5 @@ class BigQuery():
                 query, location=self.location, job_config=job_config)
             query_job.result()
         else:
-            return query_job.to_dataframe()
+            return self.client.query(query).to_dataframe()
         self.logger.info(f"Completed query to destination: {table_id}")

@@ -23,6 +23,8 @@ class Storage():
             The name of the bucket to which the client will connect.
         logger : Logger
             The logger to use for logging.
+            Passing the logger explicitly prevents duplicate logging if multiple
+            Storage objects are instantiated at the same time in parallel.
         """
 
         # set attributes
@@ -39,7 +41,7 @@ class Storage():
         self.bucket = self.client.bucket(self.bucket_name)
 
         # set up logger
-        if getattr(self, 'logger', None):
+        if getattr(self, 'logger', None) is None:
             self.logger = Logger(self.project_id).logger
 
     def download_blob(self, gcs_src_path, local_dest_path):

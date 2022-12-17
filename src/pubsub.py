@@ -24,6 +24,8 @@ class PubSub():
             Google Cloud Pub/Sub subscription ID (e.g. "my-subscription")
         logger : gcp_helpers.logger.Logger
             Logger object
+            Passing the logger explicitly prevents duplicate logging if multiple
+            PubSub objects are instantiated at the same time in parallel.
         """
 
         # pass service account key into credentials
@@ -72,7 +74,7 @@ class PubSub():
         self.encoding = "utf-8"
 
         # set up logger
-        if getattr(self, 'logger', None):
+        if logger is None:
             self.logger = Logger(self.project_id).logger
         else:
             self.logger = logger
